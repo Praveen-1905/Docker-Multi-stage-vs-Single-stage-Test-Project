@@ -1,0 +1,13 @@
+{
+  "name": "static-site-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Demo project for comparing single-stage vs multi-stage Docker builds",
+  "scripts": {
+    "build": "node build.js",
+    "lint": "eslint src/**/*.js"
+  },
+  "devDependencies": {
+    "eslint": "^9.9.0"
+  }
+}
