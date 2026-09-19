@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Docker Multi-stage Demo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="card">
+    <span class="badge" id="mode">unknown build</span>
+    <h1>It works 🎉</h1>
+    <p class="subtitle">Compare this container's image size against the other build mode.</p>
+    <ul>
+      <li><strong>Built at:</strong> __BUILD_TIME__</li>
+      <li><strong>Port:</strong> 8080</li>
+    </ul>
+    <footer>Check <code>docker images</code> to compare sizes.</footer>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
