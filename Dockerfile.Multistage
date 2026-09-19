@@ -1,0 +1,43 @@
+# ============================================================
+# MULTI-STAGE BUILD
+# Stage 1 has Node, npm, eslint, and all source files.
+# Stage 2 (final image) has ONLY nginx + the built static files.
+# ============================================================
+
+# ---------- Stage 1: build ----------
+FROM node:20-alpine AS build
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY build.js ./
+COPY src ./src
+RUN npm run build
+# At this point /app/dist contains the final static site.
+# Everything else (node_modules, eslint, source) is discarded
+# when this stage is not copied forward.
+
+# ---------- Stage 2: runtime ----------
+FROM nginx:1.27-alpine AS runtime
+
+LABEL description="Static site (multi-stage build) served by nginx"
+
+RUN rm -rf /usr/share/nginx/html/* /etc/nginx/conf.d/default.conf
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Only the build OUTPUT crosses into this final image
+COPY --from=build /app/dist /usr/share/nginx/html
+
+RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx/conf.d \
+    && touch /var/run/nginx.pid \
+    && chown -R nginx:nginx /var/run/nginx.pid
+
+USER nginx
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:8080/healthz || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]
