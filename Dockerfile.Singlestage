@@ -1,0 +1,23 @@
+# ============================================================
+# SINGLE-STAGE BUILD (for comparison only — not recommended)
+# Everything ends up in the final image: Node runtime, npm,
+# eslint + all devDependencies, source files, and node_modules.
+# ============================================================
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY build.js ./
+COPY src ./src
+RUN npm run build
+
+# Need something to actually serve the files, since this image
+# only has Node — so we install one more tool on top of everything else
+RUN npm install -g serve
+
+EXPOSE 8080
+CMD ["serve", "-s", "dist", "-l", "8080"]
