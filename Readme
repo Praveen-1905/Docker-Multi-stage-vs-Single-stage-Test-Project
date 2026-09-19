@@ -1,0 +1,88 @@
+# Docker Multi-stage vs Single-stage — Test Project
+
+This project lets you build the **same static site** two different ways and
+directly compare the results.
+
+## Files
+
+```
+docker-compare/
+├── package.json          # build script + a devDependency (eslint) to show bloat
+├── build.js               # simulates a real build step (src/ -> dist/)
+├── src/
+│   ├── index.html
+│   ├── style.css
+│   └── script.js
+├── Dockerfile.multistage  # GOOD: build stage + slim nginx runtime stage
+├── Dockerfile.singlestage # BAD (for comparison): everything in one image
+├── nginx.conf              # used only by the multi-stage image
+├── .dockerignore
+└── compare.sh              # builds both, prints sizes, runs both
+```
+
+## 1. Build each image individually
+
+```bash
+docker build -f Dockerfile.multistage -t demo-multistage:latest .
+docker build -f Dockerfile.singlestage -t demo-singlestage:latest .
+```
+
+## 2. Compare sizes
+
+```bash
+docker images | grep demo-
+```
+
+Expect something like:
+
+```
+demo-singlestage   latest   ...   ~250-400MB
+demo-multistage    latest   ...   ~25-45MB
+```
+
+(Exact numbers vary by platform/architecture, but multi-stage should be
+roughly 5-10x smaller here, and far more if you add heavier devDependencies.)
+
+## 3. Run each and confirm both work
+
+```bash
+docker run -d --rm --name demo-multi -p 8081:8080 demo-multistage:latest
+docker run -d --rm --name demo-single -p 8082:8080 demo-singlestage:latest
+```
+
+Visit:
+- http://localhost:8081 → served by nginx (multi-stage)
+- http://localhost:8082 → served by `serve` on Node (single-stage)
+
+Check the health endpoint on the multi-stage image:
+
+```bash
+curl http://localhost:8081/healthz
+```
+
+Clean up:
+
+```bash
+docker stop demo-multi demo-single
+```
+
+## 4. Or just run the all-in-one script
+
+```bash
+chmod +x compare.sh
+./compare.sh
+```
+
+## 5. Inspect what's actually inside each image (the real proof)
+
+This is the most convincing check — look at what's inside each image:
+
+```bash
+docker run --rm demo-multistage:latest sh -c "which node || echo 'no node in this image'"
+docker run --rm demo-singlestage:latest sh -c "which node && echo 'node IS in this image'"
+```
+
+The multi-stage image won't even have Node installed at runtime — only
+nginx and your static files. The single-stage image carries the entire
+Node runtime, npm, eslint, node_modules, and your original source files,
+none of which are needed to serve static HTML.
